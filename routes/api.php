@@ -2,8 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\SchoolController;
-use App\Http\Controllers\ClassController;
+use App\Http\Controllers\ScholarController;
+use App\Http\Controllers\ClassesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +16,6 @@ use App\Http\Controllers\ClassController;
 |
 */
 
-Route::resource('school', SchoolController::class);
+Route::resource('school', ScholarController::class);
 
-Route::resource('class', ClassController::class);
+Route::resource('class', ClassesController::class);
