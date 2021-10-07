@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Scholar;
 use Illuminate\Http\Request;
-  use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class ScholarController extends Controller
 {
@@ -15,13 +16,8 @@ class ScholarController extends Controller
    */
   public function index()
   {
-    $str = Scholar::all([
-      "name",
-      "gender",
-      "date",
-      "class_id"
-    ]);
-    return $str;
+    $scholar = Scholar::paginate(5);
+    return $scholar;
   }
 
   /**
@@ -80,15 +76,8 @@ class ScholarController extends Controller
    */
   public function show($id)
   {
-    $post = Scholar::find($id);
-    if (!$post) {
-      return response() -> json([
-        "status" => false,
-        "message" => "Post not found"
-      ]) -> setStatusCode(404);
-    } else {
-      return $post;
-    }
+    $scholar = DB::table('schools')->where('class_id', $id)->paginate(5);
+    return $scholar;
   }
 
   /**

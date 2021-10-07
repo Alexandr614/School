@@ -4,8 +4,21 @@
     <div v-else class="uk-container">
       <table class="uk-table uk-table-divider">
         <caption>
-          Таблица учеников
-          <button class="uk-button uk-button-primary" @click="sorted">Сортировать по {{sort_by}}</button>
+          <div class="container">
+            <div>
+              Таблица учеников
+            </div>
+            <form @submit.prevent="filterClass">
+              <label for="filter">Фильтр по классам: </label>
+              <select id="filter"
+                      class="uk-select uk-form-width-small uk-form-small"
+                      v-model="form">
+                <option>Все классы</option>
+                <option v-for="el in classes" :key="el.id" :value="el.id">{{ el.class }}</option>
+              </select>
+              <button class="uk-button uk-button-primary" type="submit">Показать</button>
+            </form>
+          </div>
         </caption>
         <thead>
         <tr>
@@ -17,26 +30,33 @@
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(str, index) in items" :key="str.id">
-          <td>{{index + 1}}</td>
-          <td
-            v-for="el in str"
-            :key="el.id"
-          >{{el}}
+        <tr v-for="str in table" :key="str.id">
+          <td v-for="el in str" :key="el.id">
+            {{ el }}
           </td>
         </tr>
         </tbody>
       </table>
+
+      <ul class="uk-pagination uk-flex-center" uk-margin>
+        <li :class="{ 'uk-disabled': !pagination.prev_page }"
+            @click.prevent="loadTable(pagination.first_page_url)">
+          <a href="">В начало</a>
+        </li>
+
+        <li v-for="temp in pagination.links" :key="temp.id"
+            :class="{ 'uk-disabled': temp.active }"
+            @click.prevent="loadTable(temp.url)">
+          <a href="">{{ temp.label }}</a>
+        </li>
+
+        <li :class="{ 'uk-disabled': !pagination.next_page }"
+            @click.prevent="loadTable(pagination.last_page_url)">
+          <a href="">В конец</a>
+        </li>
+      </ul>
+
       <hr/>
-      <paginate
-        v-model="page"
-        :page-count="pageCount"
-        :click-handler="pageChangeHandler"
-        :prev-text="'Назад'"
-        :next-text="'Вперед'"
-        :container-class="'uk-pagination uk-flex-center'"
-        :active-class="'uk-active'"
-      />
     </div>
   </div>
 </template>
@@ -44,7 +64,6 @@
 <script>
   import axios from 'axios'
   import Spin from './Spin'
-  import _ from 'lodash'
 
   export default {
     components: {
@@ -55,12 +74,10 @@
       return {
         loading: true,
         table: [],
-        sort_by: 'классу',
-        page: +this.$route.query.page || 1,
-        pageSize: 5,
-        pageCount: 0,
-        allItems: [],
-        items: []
+        classes: [],
+        temp: [],
+        pagination: [],
+        form: 'Все классы'
       }
     },
 
@@ -70,68 +87,108 @@
     },
 
     methods: {
-      loadTable() {
-        axios.get('/api/school')
+      loadTable(page_url) {
+        page_url = page_url || '/api/school'
+        axios
+          .get(page_url)
           .then(res => {
-            for (var i = 0; i < res.data.length; i++) {
-              res.data[i].date = res.data[i].date.split('-').reverse().join('.')
+            for (var i = 0; i < res.data.data.length; i++) {
+              res.data.data[i].date = res.data.data[i].date.split('-').reverse().join('.')
             }
-            this.table = res.data
-            this.table.sort((prev, next) => {
-              if (prev.name > next.name) {
+            this.temp = res.data.data
+            this.makePagination(res.data)
+          })
+          .catch(error => {
+            if (error.res) {
+              console.log(error.res.data)
+            }
+          })
+        axios
+          .get('/api/class')
+          .then(res => {
+            for (var i = 0; i < this.temp.length; i++) {
+              this.temp[i].class_id = res.data.find(temp => temp.id === this.temp[i].class_id).class
+            }
+            this.table = this.temp
+            setTimeout(() => {
+              this.loading = false;
+            }, 100)
+          })
+      },
+
+      getClass() {
+        axios
+          .get('/api/class')
+          .then(res => {
+            this.classes = res.data
+            this.classes.sort((prev, next) => {
+              if (prev.class > next.class) {
                 return 1
               } else {
                 return -1
               }
             })
+          })
+      },
+
+      makePagination(res) {
+        this.pagination = {
+          current_page: res.current_page,
+          next_page: res.next_page_url,
+          prev_page: res.prev_page_url,
+          first_page_url: res.first_page_url,
+          last_page_url: res.last_page_url
+        }
+        if (res.links.length <= 7) {
+          this.pagination.links = res.links.slice(1, res.links.length - 1)
+        } else {
+          if ((this.pagination.current_page - 3) <= 0) {
+            this.pagination.links = res.links.slice(1, 6)
+          } else if ((this.pagination.current_page - 3) > 0 && (this.pagination.current_page + 3) <= res.links.length - 2) {
+            this.pagination.links = res.links
+              .slice((this.pagination.current_page - 2), (this.pagination.current_page + 3))
+          } else {
+            this.pagination.links = res.links
+              .slice(res.links.length - 6, res.links.length - 1)
+          }
+        }
+      },
+
+      filterClass() {
+        this.loading = true
+        if (this.form == 'Все классы') {
+          this.class_id = ''
+        } else {
+          this.class_id = this.form
+        }
+        axios
+          .get(`/api/school/${this.class_id}`)
+          .then(res => {
+            for (var i = 0; i < res.data.data.length; i++) {
+              res.data.data[i].date = res.data.data[i].date.split('-').reverse().join('.')
+            }
+            this.temp = res.data.data
+            this.makePagination(res.data)
+            console.log(res)
+            console.log("OK")
+          })
+          .catch(error => {
+            if (error.res) {
+              console.log(error.res.data)
+              console.log("Error!!!")
+            }
+          })
+        axios
+          .get('/api/class')
+          .then(res => {
+            for (var i = 0; i < this.temp.length; i++) {
+              this.temp[i].class_id = res.data.find(temp => temp.id === this.temp[i].class_id).class
+            }
+            this.table = this.temp
             setTimeout(() => {
               this.loading = false;
-            }, 250)
+            }, 100)
           })
-      },
-
-      getClass() {
-        axios.get('/api/class')
-          .then(res => {
-            for (var i = 0; i < this.table.length; i++) {
-              this.table[i].class_id = res.data.find(temp => temp.id === this.table[i].class_id).class
-            }
-            this.setupPagination()
-          })
-      },
-
-      sorted() {
-        if (this.sort_by === 'имени') {
-          this.table.sort((prev, next) => {
-            if (prev.name > next.name) {
-              return 1
-            } else {
-              return -1
-            }
-          })
-          this.sort_by = 'классу'
-        } else {
-          this.table.sort((prev, next) => {
-            if (prev.class_id > next.class_id) {
-              return 1
-            } else {
-              return -1
-            }
-          })
-          this.sort_by = 'имени'
-        }
-        this.setupPagination()
-      },
-
-      pageChangeHandler() {
-        this.$router.push(`${this.$route.path}?page=${this.page}`)
-        this.items = this.allItems[this.page - 1] || this.allItems[0]
-      },
-
-      setupPagination() {
-        this.allItems = _.chunk(this.table, this.pageSize)
-        this.pageCount = _.size(this.allItems)
-        this.items = this.allItems[this.page - 1] || this.allItems[0]
       }
     }
   }
@@ -154,7 +211,12 @@
     font-family: Cambria;
   }
 
-  .uk-button {
-    float: right;
+  .uk-select {
+    text-align: right;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
   }
 </style>

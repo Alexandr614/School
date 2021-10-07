@@ -91,11 +91,12 @@
           this.loading = false
         } else {
           this.form.class = this.num + this.lit
-          axios.post('/api/class', this.form, {
-            headers: {
-              "Content-type": "application/json"
-            }
-          })
+          axios
+            .post('/api/class', this.form, {
+              headers: {
+                "Content-type": "application/json"
+              }
+            })
             .then(res => {
               if (res.data.status) {
                 this.clearInput()

@@ -64,15 +64,7 @@ class ClassesController extends Controller
    */
   public function show($id)
   {
-    $post = Classes::find($id);
-    if (!$post) {
-      return response() -> json([
-        "status" => false,
-        "message" => "Post not found"
-      ]) -> setStatusCode(404);
-    } else {
-      return $post;
-    }
+    //
   }
 
   /**

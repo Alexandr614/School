@@ -9,5 +9,6 @@ class Scholar extends Model
 {
   public $timestamps = false;
   use HasFactory;
+  protected $table = 'schools';
   protected $fillable = ['name', 'gender', 'date', 'class_id'];
 }

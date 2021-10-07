@@ -1,9 +1,9 @@
 <template>
   <form name="viewcl">
     <div class="uk-grid-row-small" uk-grid>
-    <div v-for="value in form" class="uk-card uk-card-body">
-        {{value.class}}
-    </div>
+      <div v-for="value in form" class="uk-card uk-card-body">
+          {{value.class}}
+      </div>
     </div>
   </form>
 </template>
@@ -24,7 +24,8 @@
 
     methods: {
       loadClass() {
-        axios.get('/api/class')
+        axios
+          .get('/api/class')
           .then(res => {
             this.form = res.data
             this.form.sort((prev, next) => {
@@ -34,6 +35,9 @@
                 return -1
               }
             })
+          })
+          .catch(error => {
+            console.log(error.res.data)
           })
       }
     }
